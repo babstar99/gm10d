@@ -1,0 +1,17 @@
+gm10d
+=====
+
+gm10d contributors
+    Modern daemon, MQTT/Home Assistant integration, Prometheus metrics,
+    USB/native TTY support, and corrected byte-accurate event counting.
+
+Historical foundation
+---------------------
+
+Mathias Bavay
+    Author of gm4lin. gm10d uses gm4lin 1.2.15 as the authoritative
+    reference for the Black Cat Systems GM-10/GM-45 Linux serial setup,
+    including 57600 8N1 operation and DTR detector power control.
+
+Stephen A. Misel
+    Contributor to the historical gm4lin MySQL logging implementation.

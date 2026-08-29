@@ -1,0 +1,26 @@
+[Unit]
+Description=Black Cat Systems GM-10 radiation monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gm10
+Group=dialout
+ExecStart=/usr/local/sbin/gm10d --config /etc/gm10d.conf
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

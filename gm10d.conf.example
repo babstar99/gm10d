@@ -1,0 +1,28 @@
+# gm10d configuration
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Native motherboard serial:
+device=/dev/ttyS0
+
+# For USB-to-RS232, prefer a persistent name when available:
+# device=/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A123456-if00-port0
+# device=/dev/ttyUSB0
+
+# Prometheus/VictoriaMetrics scrape endpoint.
+# Use 0.0.0.0 if vmagent scrapes this host over the LAN.
+metrics_bind=0.0.0.0
+metrics_port=9798
+
+# MQTT / Home Assistant
+mqtt_enable=true
+mqtt_host=192.168.0.10
+mqtt_port=1883
+mqtt_username=gm10
+mqtt_password_file=/etc/gm10d.mqtt-password
+mqtt_topic_prefix=gm10/gm10-01
+mqtt_device_id=gm10-01
+mqtt_discovery_prefix=homeassistant
+mqtt_publish_interval=10
+mqtt_keepalive=60
+
+serial_retry_seconds=5
