@@ -24,7 +24,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define GM10D_VERSION "0.1.2"
+#define GM10D_VERSION "0.1.3"
 
 static volatile sig_atomic_t stop_requested = 0;
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+- Fix an HTTP scrape race where the metrics server used a non-blocking `recv()` immediately after `accept()`. A remote scraper such as vmagent could complete the TCP handshake before its HTTP request bytes reached the receive queue, causing gm10d to close the connection early and the scraper to report `connection reset by peer`.
+- Wait briefly for and consume the complete HTTP request headers before responding, preventing TCP resets caused by unread request data on close.
+- Add a regression test that deliberately delays the HTTP request after connecting, reproducing the vmagent timing pattern.
+- Return `404 Not Found` for paths other than `/metrics`.
+
 ## 0.1.2
 
 - Simplify detector startup settling after real-hardware validation.

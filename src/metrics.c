@@ -5,11 +5,16 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+
+#define HTTP_REQUEST_MAX 2048
+#define HTTP_REQUEST_WAIT_MS 500
 
 void gm10_metrics_init(struct gm10_metrics_server *m)
 {
@@ -63,9 +68,85 @@ static void send_all(int fd, const char *buf, size_t len)
 {
     while (len) {
         ssize_t n = send(fd, buf, len, MSG_NOSIGNAL);
+        if (n < 0 && errno == EINTR) continue;
         if (n <= 0) return;
         buf += n;
         len -= (size_t)n;
+    }
+}
+
+/*
+ * accept(2) may complete before the peer's HTTP request bytes have reached the
+ * receive queue.  Wait briefly for, and consume, the complete request headers
+ * before responding.  This avoids closing a socket with unread request data,
+ * which can cause the peer to observe ECONNRESET (notably vmagent scrapes).
+ */
+static int64_t monotonic_ms(void)
+{
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return -1;
+    return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+static int read_http_request(int fd, char *buf, size_t buflen)
+{
+    size_t used = 0;
+    int64_t start = monotonic_ms();
+    int64_t deadline;
+
+    if (buflen < 2 || start < 0) return -1;
+    deadline = start + HTTP_REQUEST_WAIT_MS;
+
+    while (used < buflen - 1) {
+        struct pollfd pfd = {
+            .fd = fd,
+            .events = POLLIN,
+            .revents = 0,
+        };
+        int64_t now = monotonic_ms();
+        int timeout_ms;
+        int prc;
+
+        if (now < 0 || now >= deadline) return -1;
+        timeout_ms = (int)(deadline - now);
+
+        do {
+            prc = poll(&pfd, 1, timeout_ms);
+        } while (prc < 0 && errno == EINTR);
+
+        if (prc <= 0) return -1;
+        if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
+        if (!(pfd.revents & POLLIN)) continue;
+
+        ssize_t n = recv(fd, buf + used, buflen - 1 - used, 0);
+        if (n < 0 && errno == EINTR) continue;
+        if (n <= 0) return -1;
+
+        used += (size_t)n;
+        buf[used] = '\0';
+
+        if (strstr(buf, "\r\n\r\n") != NULL || strstr(buf, "\n\n") != NULL)
+            return 0;
+    }
+
+    return -1;
+}
+
+static void send_simple_response(int fd, int status, const char *reason, const char *body)
+{
+    char hdr[256];
+    size_t body_len = strlen(body);
+    int h = snprintf(hdr, sizeof(hdr),
+        "HTTP/1.1 %d %s\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "Content-Length: %zu\r\n"
+        "Connection: close\r\n\r\n",
+        status, reason, body_len);
+
+    if (h > 0 && (size_t)h < sizeof(hdr)) {
+        send_all(fd, hdr, (size_t)h);
+        send_all(fd, body, body_len);
     }
 }
 
@@ -77,7 +158,7 @@ void gm10_metrics_serve_one(struct gm10_metrics_server *m,
                             bool mqtt_connected)
 {
     int cfd;
-    char req[512];
+    char req[HTTP_REQUEST_MAX];
     char body[4096];
     char hdr[256];
     uint32_t cpm = gm10_stats_window(stats, now_sec, 60);
@@ -87,7 +168,18 @@ void gm10_metrics_serve_one(struct gm10_metrics_server *m,
 
     cfd = accept4(m->fd, NULL, NULL, SOCK_CLOEXEC);
     if (cfd == -1) return;
-    (void)recv(cfd, req, sizeof(req) - 1, MSG_DONTWAIT);
+
+    if (read_http_request(cfd, req, sizeof(req)) != 0) {
+        close(cfd);
+        return;
+    }
+
+    if (strncmp(req, "GET /metrics ", 13) != 0 &&
+        strncmp(req, "GET /metrics?", 13) != 0) {
+        send_simple_response(cfd, 404, "Not Found", "not found\n");
+        close(cfd);
+        return;
+    }
 
     int n = snprintf(body, sizeof(body),
         "# HELP gm10_pulses_total Total particle events received from the GM-10 since process start.\n"

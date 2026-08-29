@@ -19,11 +19,12 @@ gm10d: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LDLIBS)
 
 clean:
-	rm -f $(OBJ) gm10d tests/test_stats tests/test_serial_settle
+	rm -f $(OBJ) gm10d tests/test_stats tests/test_serial_settle tests/test_metrics_http
 
-check: tests/test_stats tests/test_serial_settle
+check: tests/test_stats tests/test_serial_settle tests/test_metrics_http
 	./tests/test_stats
 	./tests/test_serial_settle
+	./tests/test_metrics_http
 
 tests/test_stats: tests/test_stats.c src/stats.c src/stats.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ tests/test_stats.c src/stats.c
@@ -35,3 +36,7 @@ install: gm10d
 	install -D -m 0755 gm10d $(DESTDIR)$(PREFIX)/sbin/gm10d
 	install -D -m 0644 gm10d.conf.example $(DESTDIR)$(SYSCONFDIR)/gm10d.conf.example
 	install -D -m 0644 gm10d.service $(DESTDIR)$(SYSTEMDUNITDIR)/gm10d.service
+
+
+tests/test_metrics_http: tests/test_metrics_http.c src/metrics.c src/metrics.h src/stats.c src/stats.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ tests/test_metrics_http.c src/metrics.c src/stats.c

@@ -188,3 +188,10 @@ Version 0.1 deliberately does **not** publish dose or exposure estimates. `gm4li
 ## License
 
 GPL-2.0-or-later. See `LICENSE` and `AUTHORS`.
+
+### Remote Prometheus/vmagent scrapes
+
+`gm10d` 0.1.3 and later waits for the complete HTTP request headers before
+returning `/metrics`. This avoids a TCP timing race seen with remote vmagent
+scrapes where the TCP connection could be accepted before the HTTP request
+bytes arrived, resulting in `connection reset by peer` on the scraper.
