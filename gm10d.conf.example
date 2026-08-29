@@ -5,12 +5,13 @@
 device=/dev/ttyS0
 
 # For USB-to-RS232, prefer a persistent name when available:
-# device=/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A123456-if00-port0
+# Tested USB example (StarTech ICUSB2321F / FTDI FT232R):
+# device=/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_<SERIAL>-if00-port0
 # device=/dev/ttyUSB0
 
 # Prometheus/VictoriaMetrics scrape endpoint.
-# Use 0.0.0.0 if vmagent scrapes this host over the LAN.
-metrics_bind=0.0.0.0
+# Default is local-only. Use 0.0.0.0 if vmagent scrapes this host over a trusted LAN.
+metrics_bind=127.0.0.1
 metrics_port=9798
 
 # MQTT / Home Assistant
