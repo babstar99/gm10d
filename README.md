@@ -53,13 +53,13 @@ The acquisition code is identical for native and USB serial ports because both u
 
 ### Detector startup settling
 
-`gm10d` asserts DTR to power the detector, waits for a short configurable settle period, and discards serial input received during that interval before acquisition begins. The default is:
+`gm10d` asserts DTR to power the detector, waits for a short configurable settle period, then flushes the kernel RX queue immediately before acquisition begins. The default is:
 
 ```ini
 startup_settle_seconds=2
 ```
 
-This was added after real GM-10 hardware testing showed a repeatable power-up burst that temporarily inflated CPM and `pulses_total`. The discarded bytes are exposed separately as a diagnostic and are never added to the radiation count.
+This was added after real GM-10 hardware testing showed a repeatable power-up burst that temporarily inflated CPM and `pulses_total`. Startup input is deliberately not interpreted or counted; the RX queue is simply flushed after the settle delay so acquisition starts from a clean boundary.
 
 ## Dependencies
 
@@ -86,6 +86,13 @@ make
 
 ## Configuration
 
+Create the dedicated service account first:
+
+```bash
+sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin gm10
+sudo usermod -aG dialout gm10
+```
+
 Copy the example:
 
 ```bash
@@ -95,14 +102,15 @@ sudo cp gm10d.conf.example /etc/gm10d.conf
 For MQTT credentials, keep the password readable only by root and the dedicated `gm10` service group:
 
 ```bash
-sudo sh -c 'printf "%s\\n" "YOUR_PASSWORD" > /etc/gm10d.mqtt-password'
+sudo sh -c 'umask 077; cat > /etc/gm10d.mqtt-password'
+# Paste the MQTT password, press Enter, then Ctrl-D.
 sudo chown root:gm10 /etc/gm10d.mqtt-password
 sudo chmod 640 /etc/gm10d.mqtt-password
 ```
 
 ## Tests
 
-The statistics/ring-buffer logic and startup-settle drain have dependency-free unit tests:
+The statistics/ring-buffer logic and startup-settle RX flush have dependency-free unit tests:
 
 ```bash
 make check
@@ -110,18 +118,10 @@ make check
 
 ## systemd
 
-Create the service account:
-
-```bash
-sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin gm10
-sudo usermod -aG dialout gm10
-```
-
-Install and start:
+Install and start after creating the service account and configuration above:
 
 ```bash
 sudo make install
-sudo cp /etc/gm10d.conf.example /etc/gm10d.conf
 sudo systemctl daemon-reload
 sudo systemctl enable --now gm10d
 ```
@@ -151,7 +151,6 @@ Metrics include:
 - `gm10_serial_connected`
 - `gm10_mqtt_connected`
 - serial error/reconnect counters
-- `gm10_startup_discarded_bytes_total` — bytes discarded during detector startup settle periods
 
 Example vmagent scrape config:
 
@@ -178,7 +177,9 @@ Availability is retained at:
 gm10/gm10-01/status
 ```
 
-The daemon publishes Home Assistant MQTT discovery records for CPM, CPS, and total pulses. The retained availability topic follows the GM-10 serial connection, so the radiation entities become unavailable if the detector is unplugged or the daemon dies. Sensor state messages themselves are not retained. The state JSON also includes `startup_discarded_bytes_total` for diagnostics.
+The daemon publishes Home Assistant MQTT discovery records for CPM, CPS, and total pulses. The retained availability topic follows the GM-10 serial connection, so the radiation entities become unavailable if the detector is unplugged or the daemon dies. Sensor state messages themselves are not retained.
+
+If Home Assistant listens to a different MQTT broker, bridge both `gm10/gm10-01/#` and the `homeassistant/sensor/gm10-01_*/config` discovery topics to the broker used by Home Assistant.
 
 ## Dose conversion
 

@@ -237,10 +237,8 @@ int gm10_mqtt_publish_state(struct gm10_mqtt *m,
     snprintf(topic, sizeof(topic), "%s/state", m->cfg->mqtt_topic_prefix);
     n = snprintf(payload, sizeof(payload),
         "{\"cpm\":%u,\"cps\":%.6f,\"counts_10s\":%u,\"cpm_10s\":%u,"
-        "\"pulses_total\":%" PRIu64 ",\"startup_discarded_bytes_total\":%" PRIu64 ","
-        "\"serial_connected\":%s}",
+        "\"pulses_total\":%" PRIu64 ",\"serial_connected\":%s}",
         cpm, cps, counts10, counts10 * 6U, stats->pulses_total,
-        stats->startup_discarded_bytes_total,
         serial_connected ? "true" : "false");
     if (n < 0 || (size_t)n >= sizeof(payload)) return -1;
     return pub(m, topic, payload, false);

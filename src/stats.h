@@ -10,7 +10,6 @@ struct gm10_stats {
     uint64_t pulses_total;
     uint64_t read_errors_total;
     uint64_t reconnects_total;
-    uint64_t startup_discarded_bytes_total;
     uint64_t started_monotonic_sec;
     uint64_t bucket_second[GM10D_BUCKETS];
     uint32_t bucket_count[GM10D_BUCKETS];

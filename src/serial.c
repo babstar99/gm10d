@@ -8,8 +8,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <poll.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <termios.h>
@@ -88,104 +86,43 @@ int gm10_serial_open(struct gm10_serial *s, const char *device)
 }
 
 
-static uint64_t monotonic_msec(void)
+int gm10_serial_settle(struct gm10_serial *s, unsigned seconds)
 {
-    struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) return 0;
-    return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
-}
+    struct timespec req;
 
-int gm10_serial_settle(struct gm10_serial *s, unsigned seconds, uint64_t *discarded_bytes)
-{
-    unsigned char buf[512];
-    uint64_t discarded = 0;
-    uint64_t start_ms, deadline_ms;
-
-    if (discarded_bytes) *discarded_bytes = 0;
     if (s->fd < 0) {
         errno = EBADF;
         return -1;
     }
 
-    if (seconds == 0) {
-        if (tcflush(s->fd, TCIFLUSH) == -1) {
-            fprintf(stderr, "gm10d: startup input flush failed: %s\n", strerror(errno));
-            return -1;
-        }
-        fprintf(stderr, "gm10d: detector startup settle disabled; input flushed\n");
-        return 0;
-    }
+    if (seconds > 0) {
+        fprintf(stderr,
+                "gm10d: detector settling for %u second%s before acquisition\n",
+                seconds, seconds == 1 ? "" : "s");
 
-    fprintf(stderr,
-            "gm10d: detector settling for %u second%s; discarding startup serial input\n",
-            seconds, seconds == 1 ? "" : "s");
-
-    start_ms = monotonic_msec();
-    deadline_ms = start_ms + (uint64_t)seconds * 1000ULL;
-
-    for (;;) {
-        struct pollfd pfd;
-        uint64_t now_ms = monotonic_msec();
-        int timeout_ms;
-        int prc;
-
-        if (now_ms >= deadline_ms) break;
-        timeout_ms = (int)(deadline_ms - now_ms);
-
-        pfd.fd = s->fd;
-        pfd.events = POLLIN | POLLERR | POLLHUP | POLLNVAL;
-        pfd.revents = 0;
-        prc = poll(&pfd, 1, timeout_ms);
-        if (prc == -1) {
+        req.tv_sec = (time_t)seconds;
+        req.tv_nsec = 0;
+        while (nanosleep(&req, &req) == -1) {
             if (errno == EINTR) continue;
-            fprintf(stderr, "gm10d: startup settle poll failed: %s\n", strerror(errno));
-            if (discarded_bytes) *discarded_bytes = discarded;
+            fprintf(stderr, "gm10d: detector startup settle sleep failed: %s\n",
+                    strerror(errno));
             return -1;
         }
-        if (prc == 0) break;
-        if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
-            fprintf(stderr, "gm10d: serial error during detector startup settle\n");
-            if (discarded_bytes) *discarded_bytes = discarded;
-            errno = EIO;
-            return -1;
-        }
-        if (pfd.revents & POLLIN) {
-            for (;;) {
-                ssize_t n = read(s->fd, buf, sizeof(buf));
-                if (n > 0) {
-                    discarded += (uint64_t)n;
-                    continue;
-                }
-                if (n == -1 && errno == EINTR) continue;
-                if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                    fprintf(stderr, "gm10d: startup settle read failed: %s\n", strerror(errno));
-                    if (discarded_bytes) *discarded_bytes = discarded;
-                    return -1;
-                }
-                break;
-            }
-        }
+    } else {
+        fprintf(stderr, "gm10d: detector startup settle disabled\n");
     }
 
-    /* Drain anything that arrived at the boundary before acquisition begins. */
-    for (;;) {
-        ssize_t n = read(s->fd, buf, sizeof(buf));
-        if (n > 0) {
-            discarded += (uint64_t)n;
-            continue;
-        }
-        if (n == -1 && errno == EINTR) continue;
-        if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-            fprintf(stderr, "gm10d: final startup drain failed: %s\n", strerror(errno));
-            if (discarded_bytes) *discarded_bytes = discarded;
-            return -1;
-        }
-        break;
+    /*
+     * DTR powers the detector. Real GM-10 testing showed a power-up serial
+     * transient, so discard all queued input only after the settle delay.
+     * Do not interpret or count startup garbage as particle events.
+     */
+    if (tcflush(s->fd, TCIFLUSH) == -1) {
+        fprintf(stderr, "gm10d: startup input flush failed: %s\n", strerror(errno));
+        return -1;
     }
 
-    if (discarded_bytes) *discarded_bytes = discarded;
-    fprintf(stderr, "gm10d: detector ready; discarded %llu startup byte%s\n",
-            (unsigned long long)discarded, discarded == 1 ? "" : "s");
+    fprintf(stderr, "gm10d: detector ready; startup input flushed\n");
     return 0;
 }
 

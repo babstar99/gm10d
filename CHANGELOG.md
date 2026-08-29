@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Simplify detector startup settling after real-hardware validation.
+- After DTR assertion, wait `startup_settle_seconds` and then discard queued RX input with `tcflush(TCIFLUSH)` before acquisition begins.
+- Remove `gm10_startup_discarded_bytes_total`; startup electrical activity is intentionally not interpreted as meaningful serial bytes.
+- Preserve the validated 57600 8N1, DTR power, byte-accurate counting, MQTT/Home Assistant, and Prometheus/VictoriaMetrics behaviour.
+
 ## 0.1.1
 
 - Add configurable `startup_settle_seconds` (default 2 seconds).

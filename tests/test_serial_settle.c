@@ -4,36 +4,53 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
+#include <termios.h>
 #include <unistd.h>
 
 int main(void)
 {
-    int p[2];
+    int master_fd, slave_fd;
+    char *slave_name;
     struct gm10_serial serial;
-    uint64_t discarded = 0;
     const unsigned char startup_bytes[] = {1, 2, 3, 4, 5, 6, 7};
     unsigned char byte;
-    int flags;
+    struct termios tty;
 
-    assert(pipe(p) == 0);
-    flags = fcntl(p[0], F_GETFL, 0);
-    assert(flags >= 0);
-    assert(fcntl(p[0], F_SETFL, flags | O_NONBLOCK) == 0);
-    assert(write(p[1], startup_bytes, sizeof(startup_bytes)) == (ssize_t)sizeof(startup_bytes));
+    master_fd = posix_openpt(O_RDWR | O_NOCTTY | O_CLOEXEC);
+    assert(master_fd >= 0);
+    assert(grantpt(master_fd) == 0);
+    assert(unlockpt(master_fd) == 0);
+    slave_name = ptsname(master_fd);
+    assert(slave_name != NULL);
 
-    serial.fd = p[0];
-    assert(gm10_serial_settle(&serial, 1, &discarded) == 0);
-    assert(discarded == sizeof(startup_bytes));
+    slave_fd = open(slave_name, O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
+    assert(slave_fd >= 0);
+
+    assert(tcgetattr(slave_fd, &tty) == 0);
+    cfmakeraw(&tty);
+    assert(tcsetattr(slave_fd, TCSANOW, &tty) == 0);
+
+    assert(write(master_fd, startup_bytes, sizeof(startup_bytes)) ==
+           (ssize_t)sizeof(startup_bytes));
+
+    serial.fd = slave_fd;
+    assert(gm10_serial_settle(&serial, 0) == 0);
 
     errno = 0;
-    assert(read(p[0], &byte, 1) == -1);
+    assert(read(slave_fd, &byte, 1) == -1);
     assert(errno == EAGAIN || errno == EWOULDBLOCK);
 
-    close(p[1]);
-    close(p[0]);
+    /* New input arriving after the flush must remain readable. */
+    byte = 42;
+    assert(write(master_fd, &byte, 1) == 1);
+    byte = 0;
+    assert(read(slave_fd, &byte, 1) == 1);
+    assert(byte == 42);
+
+    close(slave_fd);
+    close(master_fd);
     puts("serial settle tests: ok");
     return 0;
 }

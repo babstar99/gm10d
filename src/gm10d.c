@@ -24,7 +24,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define GM10D_VERSION "0.1.1"
+#define GM10D_VERSION "0.1.2"
 
 static volatile sig_atomic_t stop_requested = 0;
 
@@ -111,9 +111,7 @@ int main(int argc, char **argv)
         now = monotonic_sec();
         if (serial.fd < 0 && now >= next_serial_retry) {
             if (gm10_serial_open(&serial, cfg.device) == 0) {
-                uint64_t discarded = 0;
-                int settle_rc = gm10_serial_settle(&serial, cfg.startup_settle_seconds, &discarded);
-                stats.startup_discarded_bytes_total += discarded;
+                int settle_rc = gm10_serial_settle(&serial, cfg.startup_settle_seconds);
 
                 if (settle_rc == 0) {
                     if (serial_ever_connected) stats.reconnects_total++;

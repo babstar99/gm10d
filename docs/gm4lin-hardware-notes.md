@@ -50,6 +50,6 @@ and describes sensitivity in `cps/mR/h`. Version 0.1 of `gm10d` intentionally do
 
 so the displayed CPM is the 10-second count multiplied by six. `gm10d` exports this as `gm10_cpm_10s` for comparison, while `gm10_cpm` is the actual event count in the preceding rolling 60 seconds.
 
-## gm10d startup-settle behaviour (0.1.1)
+## gm10d startup-settle behaviour (0.1.2)
 
-Real GM-10 testing showed a burst of serial bytes immediately after DTR powers the detector. Those bytes inflated the first rolling minute and cumulative pulse count, then disappeared from the 60-second window. `gm10d` therefore deliberately differs from gm4lin at startup: after asserting DTR it waits for `startup_settle_seconds` (default 2 seconds), drains and counts those bytes as diagnostics, then begins radiation acquisition. The discarded bytes are exported as `gm10_startup_discarded_bytes_total` and never enter `gm10_pulses_total`.
+Real GM-10 testing showed a burst of apparent serial activity immediately after DTR powers the detector. That activity inflated the first rolling minute and cumulative pulse count, then disappeared from the 60-second window. `gm10d` therefore deliberately differs from gm4lin at startup: after asserting DTR it waits for `startup_settle_seconds` (default 2 seconds), calls `tcflush(TCIFLUSH)` to discard all queued startup input, and only then begins radiation acquisition. Startup activity is not interpreted or counted because real-hardware testing showed that attempting to count it can be misleading.
