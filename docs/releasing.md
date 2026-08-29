@@ -15,8 +15,8 @@ Example:
 
 ```bash
 make clean
-make CFLAGS='-O2 -g -Werror'
-make check CFLAGS='-O2 -g -Werror'
+make WERROR=1
+make check WERROR=1
 
 git tag -a v0.1.4 -m 'gm10d 0.1.4'
 git archive --format=tar.gz --prefix=gm10d-0.1.4/ \

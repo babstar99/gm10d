@@ -20,7 +20,7 @@ jobs:
           sudo apt-get install -y build-essential libmosquitto-dev
 
       - name: Build with warnings as errors
-        run: make CFLAGS='-O2 -g -Werror'
+        run: make WERROR=1
 
       - name: Run tests
-        run: make check CFLAGS='-O2 -g -Werror'
+        run: make check WERROR=1

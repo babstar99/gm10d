@@ -28,8 +28,8 @@ Before submitting a change:
 
 ```bash
 make clean
-make CFLAGS='-O2 -g -Werror'
-make check CFLAGS='-O2 -g -Werror'
+make WERROR=1
+make check WERROR=1
 ```
 
 ## Code style
