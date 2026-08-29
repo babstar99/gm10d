@@ -24,7 +24,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define GM10D_VERSION "0.1.0"
+#define GM10D_VERSION "0.1.1"
 
 static volatile sig_atomic_t stop_requested = 0;
 
@@ -111,9 +111,22 @@ int main(int argc, char **argv)
         now = monotonic_sec();
         if (serial.fd < 0 && now >= next_serial_retry) {
             if (gm10_serial_open(&serial, cfg.device) == 0) {
-                if (serial_ever_connected) stats.reconnects_total++;
-                serial_ever_connected = true;
-                gm10_mqtt_set_detector_connected(&mqtt, true);
+                uint64_t discarded = 0;
+                int settle_rc = gm10_serial_settle(&serial, cfg.startup_settle_seconds, &discarded);
+                stats.startup_discarded_bytes_total += discarded;
+
+                if (settle_rc == 0) {
+                    if (serial_ever_connected) stats.reconnects_total++;
+                    serial_ever_connected = true;
+                    gm10_mqtt_set_detector_connected(&mqtt, true);
+                } else {
+                    fprintf(stderr,
+                            "gm10d: detector startup settle failed; retrying in %u seconds\n",
+                            cfg.serial_retry_seconds);
+                    gm10_serial_close(&serial);
+                    gm10_mqtt_set_detector_connected(&mqtt, false);
+                    next_serial_retry = now + cfg.serial_retry_seconds;
+                }
             } else {
                 next_serial_retry = now + cfg.serial_retry_seconds;
             }

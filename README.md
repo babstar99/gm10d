@@ -15,6 +15,7 @@ It is written in C, runs in the foreground under systemd, and deliberately avoid
 - no Python, pip, virtualenv, container, database, or web framework
 - native motherboard RS-232 and USB-to-RS232 through the same Linux TTY interface
 - preserve raw particle counts as the authoritative measurement
+- discard detector power-up serial transients before acquisition begins
 - robust enough for unattended systemd operation
 
 ## gm4lin lineage
@@ -50,6 +51,16 @@ device=/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A123456-if00-port0
 
 The acquisition code is identical for native and USB serial ports because both use the Linux TTY API.
 
+### Detector startup settling
+
+`gm10d` asserts DTR to power the detector, waits for a short configurable settle period, and discards serial input received during that interval before acquisition begins. The default is:
+
+```ini
+startup_settle_seconds=2
+```
+
+This was added after real GM-10 hardware testing showed a repeatable power-up burst that temporarily inflated CPM and `pulses_total`. The discarded bytes are exposed separately as a diagnostic and are never added to the radiation count.
+
 ## Dependencies
 
 Direct runtime dependency on Debian 13:
@@ -81,16 +92,17 @@ Copy the example:
 sudo cp gm10d.conf.example /etc/gm10d.conf
 ```
 
-For MQTT credentials:
+For MQTT credentials, keep the password readable only by root and the dedicated `gm10` service group:
 
 ```bash
 sudo sh -c 'printf "%s\\n" "YOUR_PASSWORD" > /etc/gm10d.mqtt-password'
-sudo chmod 600 /etc/gm10d.mqtt-password
+sudo chown root:gm10 /etc/gm10d.mqtt-password
+sudo chmod 640 /etc/gm10d.mqtt-password
 ```
 
 ## Tests
 
-The statistics/ring-buffer logic has a dependency-free unit test:
+The statistics/ring-buffer logic and startup-settle drain have dependency-free unit tests:
 
 ```bash
 make check
@@ -101,7 +113,8 @@ make check
 Create the service account:
 
 ```bash
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin --groups dialout gm10
+sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin gm10
+sudo usermod -aG dialout gm10
 ```
 
 Install and start:
@@ -138,6 +151,7 @@ Metrics include:
 - `gm10_serial_connected`
 - `gm10_mqtt_connected`
 - serial error/reconnect counters
+- `gm10_startup_discarded_bytes_total` — bytes discarded during detector startup settle periods
 
 Example vmagent scrape config:
 
@@ -164,7 +178,7 @@ Availability is retained at:
 gm10/gm10-01/status
 ```
 
-The daemon publishes Home Assistant MQTT discovery records for CPM, CPS, and total pulses. The retained availability topic follows the GM-10 serial connection, so the radiation entities become unavailable if the detector is unplugged or the daemon dies. Sensor state messages themselves are not retained.
+The daemon publishes Home Assistant MQTT discovery records for CPM, CPS, and total pulses. The retained availability topic follows the GM-10 serial connection, so the radiation entities become unavailable if the detector is unplugged or the daemon dies. Sensor state messages themselves are not retained. The state JSON also includes `startup_discarded_bytes_total` for diagnostics.
 
 ## Dose conversion
 

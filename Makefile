@@ -19,13 +19,17 @@ gm10d: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LDLIBS)
 
 clean:
-	rm -f $(OBJ) gm10d tests/test_stats
+	rm -f $(OBJ) gm10d tests/test_stats tests/test_serial_settle
 
-check: tests/test_stats
+check: tests/test_stats tests/test_serial_settle
 	./tests/test_stats
+	./tests/test_serial_settle
 
 tests/test_stats: tests/test_stats.c src/stats.c src/stats.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ tests/test_stats.c src/stats.c
+
+tests/test_serial_settle: tests/test_serial_settle.c src/serial.c src/serial.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ tests/test_serial_settle.c src/serial.c
 
 install: gm10d
 	install -D -m 0755 gm10d $(DESTDIR)$(PREFIX)/sbin/gm10d

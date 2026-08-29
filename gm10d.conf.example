@@ -25,4 +25,8 @@ mqtt_discovery_prefix=homeassistant
 mqtt_publish_interval=10
 mqtt_keepalive=60
 
+# After DTR powers the detector, discard serial input during this settle period.
+# This prevents GM-10 power-up transients from contaminating CPM/pulses_total.
+startup_settle_seconds=2
+
 serial_retry_seconds=5

@@ -26,6 +26,7 @@ struct gm10_config {
     unsigned mqtt_keepalive;
 
     unsigned serial_retry_seconds;
+    unsigned startup_settle_seconds;
 };
 
 void gm10_config_defaults(struct gm10_config *cfg);

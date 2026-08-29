@@ -117,13 +117,17 @@ void gm10_metrics_serve_one(struct gm10_metrics_server *m,
         "# HELP gm10_serial_reconnects_total Successful serial reconnections after startup.\n"
         "# TYPE gm10_serial_reconnects_total counter\n"
         "gm10_serial_reconnects_total %" PRIu64 "\n"
+        "# HELP gm10_startup_discarded_bytes_total Serial bytes discarded during detector startup settle periods, including reconnects.\n"
+        "# TYPE gm10_startup_discarded_bytes_total counter\n"
+        "gm10_startup_discarded_bytes_total %" PRIu64 "\n"
         "# HELP gm10_uptime_seconds gm10d process uptime in seconds.\n"
         "# TYPE gm10_uptime_seconds gauge\n"
         "gm10_uptime_seconds %" PRIu64 "\n",
         stats->pulses_total, cpm, cps, counts10, counts10 * 6U,
         serial_connected ? 1 : 0,
         mqtt_enabled && mqtt_connected ? 1 : 0,
-        stats->read_errors_total, stats->reconnects_total, uptime);
+        stats->read_errors_total, stats->reconnects_total,
+        stats->startup_discarded_bytes_total, uptime);
 
     if (n < 0 || (size_t)n >= sizeof(body)) {
         close(cfd);

@@ -78,6 +78,7 @@ void gm10_config_defaults(struct gm10_config *cfg)
     cfg->mqtt_keepalive = 60;
 
     cfg->serial_retry_seconds = 5;
+    cfg->startup_settle_seconds = 2;
 }
 
 int gm10_config_load(struct gm10_config *cfg, const char *path)
@@ -130,6 +131,8 @@ int gm10_config_load(struct gm10_config *cfg, const char *path)
             if (parse_uint(value, &cfg->mqtt_keepalive, 5, 3600)) goto bad;
         } else if (!strcmp(key, "serial_retry_seconds")) {
             if (parse_uint(value, &cfg->serial_retry_seconds, 1, 3600)) goto bad;
+        } else if (!strcmp(key, "startup_settle_seconds")) {
+            if (parse_uint(value, &cfg->startup_settle_seconds, 0, 60)) goto bad;
         } else {
             fprintf(stderr, "gm10d: %s:%u: unknown key '%s'\n", path, lineno, key);
             fclose(fp);

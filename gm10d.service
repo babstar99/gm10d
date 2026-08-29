@@ -6,7 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=gm10
-Group=dialout
+Group=gm10
+SupplementaryGroups=dialout
 ExecStart=/usr/local/sbin/gm10d --config /etc/gm10d.conf
 Restart=on-failure
 RestartSec=5
