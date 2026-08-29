@@ -11,7 +11,7 @@ SYSTEMDUNITDIR ?= /etc/systemd/system
 SRC = src/gm10d.c src/config.c src/serial.c src/stats.c src/metrics.c src/mqtt.c
 OBJ = $(SRC:.c=.o)
 
-.PHONY: all clean check install
+.PHONY: all clean check install uninstall
 
 all: gm10d
 
@@ -40,3 +40,9 @@ install: gm10d
 
 tests/test_metrics_http: tests/test_metrics_http.c src/metrics.c src/metrics.h src/stats.c src/stats.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ tests/test_metrics_http.c src/metrics.c src/stats.c
+
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/sbin/gm10d
+	rm -f $(DESTDIR)$(SYSCONFDIR)/gm10d.conf.example
+	rm -f $(DESTDIR)$(SYSTEMDUNITDIR)/gm10d.service

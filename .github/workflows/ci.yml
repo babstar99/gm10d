@@ -1,0 +1,26 @@
+name: build-and-test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libmosquitto-dev
+
+      - name: Build with warnings as errors
+        run: make CFLAGS='-O2 -g -Werror'
+
+      - name: Run tests
+        run: make check CFLAGS='-O2 -g -Werror'

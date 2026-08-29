@@ -1,0 +1,14 @@
+gm10d
+=====
+
+Copyright (C) 2026 gm10d contributors
+
+Hardware behaviour and definitions are based on gm4lin 1.2.15 by Mathias
+Bavay, Copyright (C) 2003 Mathias Bavay, distributed under the GNU General
+Public License version 2 or (at your option) any later version.
+
+The gm4lin source itself is not redistributed in this repository. Historical
+credit and the hardware behaviours derived from it are documented in AUTHORS
+and docs/gm4lin-hardware-notes.md.
+
+The gm10d project is distributed under GPL-2.0-or-later.

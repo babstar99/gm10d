@@ -1,4 +1,8 @@
 gm10d
 src/*.o
+tests/test_stats
+tests/test_serial_settle
+tests/test_metrics_http
 *.swp
 *~
+.DS_Store
