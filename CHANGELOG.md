@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+- Add diagnostic instrumentation for successful serial reads without changing GM-10 event-counting behaviour.
+- Export total serial read calls and bytes, multi-byte read calls and bytes, read-size buckets, and the largest successful read seen since process start.
+- Export the largest number of particle events observed in any one-second bucket since process start.
+- Keep every received byte counted exactly as before; this release does not filter, reject, merge, or reinterpret detector events.
+- Add regression coverage for the serial-read diagnostics and Prometheus output.
+- Document real-hardware known-source validation using an independently identified Tc-99m source, including v0.1.4 serial-read diagnostics.
+
 ## 0.1.3
 
 - Fix an HTTP scrape race where the metrics server used a non-blocking `recv()` immediately after `accept()`. A remote scraper such as vmagent could complete the TCP handshake before its HTTP request bytes reached the receive queue, causing gm10d to close the connection early and the scraper to report `connection reset by peer`.

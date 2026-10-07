@@ -24,7 +24,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define GM10D_VERSION "0.1.3"
+#define GM10D_VERSION "0.1.4"
 
 static volatile sig_atomic_t stop_requested = 0;
 
@@ -159,6 +159,7 @@ int main(int argc, char **argv)
                 for (;;) {
                     ssize_t n = gm10_serial_read(&serial, buf, sizeof(buf));
                     if (n > 0) {
+                        gm10_stats_record_serial_read(&stats, (uint32_t)n);
                         /* Black Cat protocol: each received byte represents one particle event. */
                         gm10_stats_add(&stats, now, (uint32_t)n);
                         continue;

@@ -3,7 +3,7 @@
 `gm10d` is a small Linux daemon for the **Black Cat Systems GM-10** serial radiation detector.
 It turns the detector's raw serial pulse stream into useful long-running telemetry without a Python/pip stack.
 
-**Current version:** 0.1.3  
+**Current version:** 0.1.4
 **License:** GPL-2.0-or-later  
 **Runtime:** C + `libmosquitto` + the normal Linux/POSIX runtime
 
@@ -199,7 +199,16 @@ Exported metrics include:
 | `gm10_serial_read_errors_total` | counter | Serial read/HUP errors |
 | `gm10_serial_reconnects_total` | counter | Successful serial reconnects after startup |
 | `gm10_uptime_seconds` | gauge | Process uptime |
-
+| `gm10_max_events_1s` | gauge | Largest number of events observed in any one-second bucket since process start |
+| `gm10_serial_read_calls_total` | counter | Successful serial `read()` calls since process start |
+| `gm10_serial_bytes_total` | counter | Bytes returned by successful serial reads since process start |
+| `gm10_serial_multibyte_reads_total` | counter | Successful serial reads returning more than one byte |
+| `gm10_serial_multibyte_bytes_total` | counter | Bytes returned by successful multi-byte serial reads |
+| `gm10_serial_reads_1byte_total` | counter | Successful serial reads returning exactly one byte |
+| `gm10_serial_reads_2_4bytes_total` | counter | Successful serial reads returning 2–4 bytes |
+| `gm10_serial_reads_5_16bytes_total` | counter | Successful serial reads returning 5–16 bytes |
+| `gm10_serial_reads_gt16bytes_total` | counter | Successful serial reads returning more than 16 bytes |
+| `gm10_serial_max_read_size_bytes` | gauge | Largest successful serial read size since process start |
 VictoriaMetrics examples are in [docs/victoriametrics.md](docs/victoriametrics.md).
 
 ## MQTT / Home Assistant
@@ -239,8 +248,8 @@ See [SECURITY.md](SECURITY.md).
 
 ## Project status
 
-Version 0.1.3 has been validated end-to-end on real hardware with systemd, Mosquitto, Home Assistant MQTT discovery, vmagent, VictoriaMetrics, and Grafana. See [docs/validation.md](docs/validation.md).
 
+Version 0.1.4 has been validated end-to-end on real GM-10 hardware with systemd, Mosquitto, Home Assistant MQTT discovery, vmagent, VictoriaMetrics, and Grafana. It adds serial-read diagnostics without changing the event-counting algorithm, and the byte-accurate acquisition path has also been exercised against an independently known Tc-99m source. See [docs/validation.md](docs/validation.md).
 ## License
 
 `gm10d` is licensed under **GPL-2.0-or-later**. See [LICENSE](LICENSE), [AUTHORS](AUTHORS), and [NOTICE](NOTICE).

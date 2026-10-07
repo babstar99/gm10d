@@ -52,6 +52,10 @@ static void child_client(unsigned port)
 
     assert(strstr(response, "HTTP/1.1 200 OK") != NULL);
     assert(strstr(response, "gm10_pulses_total 42") != NULL);
+    assert(strstr(response, "gm10_max_events_1s 42") != NULL);
+    assert(strstr(response, "gm10_serial_bytes_total 42") != NULL);
+    assert(strstr(response, "gm10_serial_multibyte_bytes_total 41") != NULL);
+    assert(strstr(response, "gm10_serial_max_read_size_bytes 33") != NULL);
     close(fd);
     _exit(0);
 }
@@ -64,6 +68,10 @@ int main(void)
 
     gm10_metrics_init(&metrics);
     gm10_stats_init(&stats, 1000);
+    gm10_stats_record_serial_read(&stats, 1);
+    gm10_stats_record_serial_read(&stats, 3);
+    gm10_stats_record_serial_read(&stats, 5);
+    gm10_stats_record_serial_read(&stats, 33);
     gm10_stats_add(&stats, 1000, 42);
     assert(gm10_metrics_open(&metrics, "127.0.0.1", (uint16_t)port) == 0);
 

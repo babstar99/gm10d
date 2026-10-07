@@ -159,7 +159,7 @@ void gm10_metrics_serve_one(struct gm10_metrics_server *m,
 {
     int cfd;
     char req[HTTP_REQUEST_MAX];
-    char body[4096];
+    char body[8192];
     char hdr[256];
     uint32_t cpm = gm10_stats_window(stats, now_sec, 60);
     uint32_t counts10 = gm10_stats_window(stats, now_sec, 10);
@@ -197,12 +197,42 @@ void gm10_metrics_serve_one(struct gm10_metrics_server *m,
         "# HELP gm10_cpm_10s Ten-second count extrapolated to CPM, compatible with gm4lin activity mode.\n"
         "# TYPE gm10_cpm_10s gauge\n"
         "gm10_cpm_10s %u\n"
+        "# HELP gm10_max_events_1s Largest number of particle events observed in any one-second bucket since process start.\n"
+        "# TYPE gm10_max_events_1s gauge\n"
+        "gm10_max_events_1s %u\n"
         "# HELP gm10_serial_connected Whether the serial detector is currently connected.\n"
         "# TYPE gm10_serial_connected gauge\n"
         "gm10_serial_connected %d\n"
         "# HELP gm10_mqtt_connected Whether MQTT is currently connected; zero when MQTT is disabled.\n"
         "# TYPE gm10_mqtt_connected gauge\n"
         "gm10_mqtt_connected %d\n"
+        "# HELP gm10_serial_read_calls_total Successful serial read calls since process start.\n"
+        "# TYPE gm10_serial_read_calls_total counter\n"
+        "gm10_serial_read_calls_total %" PRIu64 "\n"
+        "# HELP gm10_serial_bytes_total Bytes returned by successful serial reads since process start.\n"
+        "# TYPE gm10_serial_bytes_total counter\n"
+        "gm10_serial_bytes_total %" PRIu64 "\n"
+        "# HELP gm10_serial_multibyte_reads_total Successful serial reads returning more than one byte.\n"
+        "# TYPE gm10_serial_multibyte_reads_total counter\n"
+        "gm10_serial_multibyte_reads_total %" PRIu64 "\n"
+        "# HELP gm10_serial_multibyte_bytes_total Bytes returned by successful multi-byte serial reads.\n"
+        "# TYPE gm10_serial_multibyte_bytes_total counter\n"
+        "gm10_serial_multibyte_bytes_total %" PRIu64 "\n"
+        "# HELP gm10_serial_reads_1byte_total Successful serial reads returning exactly one byte.\n"
+        "# TYPE gm10_serial_reads_1byte_total counter\n"
+        "gm10_serial_reads_1byte_total %" PRIu64 "\n"
+        "# HELP gm10_serial_reads_2_4bytes_total Successful serial reads returning 2 to 4 bytes.\n"
+        "# TYPE gm10_serial_reads_2_4bytes_total counter\n"
+        "gm10_serial_reads_2_4bytes_total %" PRIu64 "\n"
+        "# HELP gm10_serial_reads_5_16bytes_total Successful serial reads returning 5 to 16 bytes.\n"
+        "# TYPE gm10_serial_reads_5_16bytes_total counter\n"
+        "gm10_serial_reads_5_16bytes_total %" PRIu64 "\n"
+        "# HELP gm10_serial_reads_gt16bytes_total Successful serial reads returning more than 16 bytes.\n"
+        "# TYPE gm10_serial_reads_gt16bytes_total counter\n"
+        "gm10_serial_reads_gt16bytes_total %" PRIu64 "\n"
+        "# HELP gm10_serial_max_read_size_bytes Largest successful serial read size since process start.\n"
+        "# TYPE gm10_serial_max_read_size_bytes gauge\n"
+        "gm10_serial_max_read_size_bytes %u\n"
         "# HELP gm10_serial_read_errors_total Serial read/HUP errors since process start.\n"
         "# TYPE gm10_serial_read_errors_total counter\n"
         "gm10_serial_read_errors_total %" PRIu64 "\n"
@@ -213,8 +243,14 @@ void gm10_metrics_serve_one(struct gm10_metrics_server *m,
         "# TYPE gm10_uptime_seconds gauge\n"
         "gm10_uptime_seconds %" PRIu64 "\n",
         stats->pulses_total, cpm, cps, counts10, counts10 * 6U,
+        stats->max_events_1s,
         serial_connected ? 1 : 0,
         mqtt_enabled && mqtt_connected ? 1 : 0,
+        stats->serial_read_calls_total, stats->serial_bytes_total,
+        stats->serial_multibyte_reads_total, stats->serial_multibyte_bytes_total,
+        stats->serial_reads_1byte_total, stats->serial_reads_2_4bytes_total,
+        stats->serial_reads_5_16bytes_total, stats->serial_reads_gt16bytes_total,
+        stats->serial_max_read_size_bytes,
         stats->read_errors_total, stats->reconnects_total, uptime);
 
     if (n < 0 || (size_t)n >= sizeof(body)) {
